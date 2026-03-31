@@ -4,13 +4,12 @@ import { CONFIG } from './config.js';
 export class Input {
   constructor(canvas) {
     this.keys = {};
+    this.canvas = canvas;
 
-    // Touch state
+    // Touch / pointer state
     this.touchActive = false;
     this.touchX = 0;
     this.touchY = 0;
-    this.touchStartX = 0;
-    this.touchStartY = 0;
     this.touchDx = 0;
     this.touchDy = 0;
     this._tapped = false;
@@ -26,59 +25,97 @@ export class Input {
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
 
-    // Touch events on canvas + document fallback
     if (canvas) {
-      const onTouchStart = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const t = e.touches[0];
-        const rect = canvas.getBoundingClientRect();
-        this.touchActive = true;
-        this.touchStartX = t.clientX - rect.left;
-        this.touchStartY = t.clientY - rect.top;
-        this.touchX = this.touchStartX;
-        this.touchY = this.touchStartY;
-        this.touchDx = 0;
-        this.touchDy = 0;
-        this._tapped = true;
-      };
-
-      const onTouchMove = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!this.touchActive) return;
-        const t = e.touches[0];
-        const rect = canvas.getBoundingClientRect();
-        const newX = t.clientX - rect.left;
-        const newY = t.clientY - rect.top;
-        const scaleX = CONFIG.CANVAS_WIDTH / rect.width;
-        const scaleY = CONFIG.CANVAS_HEIGHT / rect.height;
-        this.touchDx = (newX - this.touchX) * scaleX;
-        this.touchDy = (newY - this.touchY) * scaleY;
-        this.touchX = newX;
-        this.touchY = newY;
-      };
-
-      const onTouchEnd = (e) => {
-        e.preventDefault();
-        this.touchActive = false;
-        this.touchDx = 0;
-        this.touchDy = 0;
-      };
-
-      // Bind to canvas
-      canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-      canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-      canvas.addEventListener('touchend', onTouchEnd, { passive: false });
-      canvas.addEventListener('touchcancel', onTouchEnd);
-
-      // Also bind to document as fallback for phones that don't
-      // reliably fire touch events on canvas elements
-      document.addEventListener('touchstart', onTouchStart, { passive: false });
-      document.addEventListener('touchmove', onTouchMove, { passive: false });
-      document.addEventListener('touchend', onTouchEnd, { passive: false });
-      document.addEventListener('touchcancel', onTouchEnd);
+      this._bindTouch(canvas);
+      this._bindPointer(canvas);
+      this._bindClick(canvas);
     }
+  }
+
+  // --- Touch Events (Android Chrome, some iOS) ---
+  _bindTouch(canvas) {
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      this._onPointerDown(t.clientX, t.clientY);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      this._onPointerMove(t.clientX, t.clientY);
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this._onPointerUp();
+    }, { passive: false });
+
+    canvas.addEventListener('touchcancel', () => {
+      this._onPointerUp();
+    });
+  }
+
+  // --- Pointer Events (iOS Safari 13+, modern browsers) ---
+  _bindPointer(canvas) {
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return; // handled by click
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      this._onPointerDown(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse') return;
+      e.preventDefault();
+      this._onPointerMove(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'mouse') return;
+      this._onPointerUp();
+    });
+
+    canvas.addEventListener('pointercancel', () => {
+      this._onPointerUp();
+    });
+  }
+
+  // --- Click fallback (tap-to-start on any device) ---
+  _bindClick(canvas) {
+    canvas.addEventListener('click', () => {
+      this._tapped = true;
+    });
+  }
+
+  // --- Shared pointer logic ---
+  _onPointerDown(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+    this.touchActive = true;
+    this.touchX = clientX - rect.left;
+    this.touchY = clientY - rect.top;
+    this.touchDx = 0;
+    this.touchDy = 0;
+    this._tapped = true;
+  }
+
+  _onPointerMove(clientX, clientY) {
+    if (!this.touchActive) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const newX = clientX - rect.left;
+    const newY = clientY - rect.top;
+    const scaleX = CONFIG.CANVAS_WIDTH / rect.width;
+    const scaleY = CONFIG.CANVAS_HEIGHT / rect.height;
+    this.touchDx += (newX - this.touchX) * scaleX;
+    this.touchDy += (newY - this.touchY) * scaleY;
+    this.touchX = newX;
+    this.touchY = newY;
+  }
+
+  _onPointerUp() {
+    this.touchActive = false;
+    this.touchDx = 0;
+    this.touchDy = 0;
   }
 
   isDown(key) {
@@ -118,7 +155,6 @@ export class Input {
     return was;
   }
 
-  // Consume touch movement delta (call once per frame)
   consumeTouch() {
     const dx = this.touchDx;
     const dy = this.touchDy;
