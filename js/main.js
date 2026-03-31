@@ -39,6 +39,18 @@ function init() {
 
 init();
 
+let tempNotifyUntil = 0;
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === '[') {
+    background.cycleTemp(-1);
+    tempNotifyUntil = performance.now() + 1500;
+  } else if (e.key === ']') {
+    background.cycleTemp(1);
+    tempNotifyUntil = performance.now() + 1500;
+  }
+});
+
 function spawnEnemy(now) {
   if (now - lastEnemySpawn < CONFIG.ENEMY_SPAWN_INTERVAL_MS) return;
   lastEnemySpawn = now;
@@ -95,14 +107,12 @@ function update(now) {
   // Update enemies
   enemies.forEach(e => {
     e.update(frame);
-    if (e.type === 'cat') {
-      const shots = e.tryShoot(
-        player.x + player.width / 2,
-        player.y + player.height / 2,
-        now
-      );
-      enemyBullets.push(...shots);
-    }
+    const shots = e.tryShoot(
+      player.x + player.width / 2,
+      player.y + player.height / 2,
+      now
+    );
+    enemyBullets.push(...shots);
   });
   enemies = enemies.filter(e => !e.isOffscreen());
 
@@ -227,6 +237,8 @@ function draw() {
     ctx.font = '14px monospace';
     ctx.fillStyle = '#666';
     ctx.fillText('按任意鍵開始', CONFIG.CANVAS_WIDTH / 2, CONFIG.CANVAS_HEIGHT - 100);
+    ctx.fillStyle = '#999';
+    ctx.fillText('[ ] 鍵切換背景色溫', CONFIG.CANVAS_WIDTH / 2, CONFIG.CANVAS_HEIGHT - 75);
     drawCat(ctx, CONFIG.CANVAS_WIDTH / 2 - 50, 280);
     drawBoss(ctx, CONFIG.CANVAS_WIDTH / 2 - 32, 380);
     return;
@@ -279,7 +291,7 @@ function draw() {
   // Enemy bullets
   enemyBullets.forEach(b => {
     if (b.width >= 10) drawBone(ctx, b.x, b.y);
-    else drawFurball(ctx, b.x, b.y);
+    else drawFurball(ctx, b.x, b.y, frame);
   });
 
   // Boss
@@ -293,6 +305,19 @@ function draw() {
   // HUD
   const bossHp = boss && !boss.dead ? boss.hp : null;
   hud.draw(ctx, state.score, player.lives, player.level, bossHp);
+
+  // Background temp notification
+  const drawNow = performance.now();
+  if (drawNow < tempNotifyUntil) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(CONFIG.CANVAS_WIDTH / 2 - 60, CONFIG.CANVAS_HEIGHT - 40, 120, 24);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`背景: ${background.tempLabel}`, CONFIG.CANVAS_WIDTH / 2, CONFIG.CANVAS_HEIGHT - 23);
+    ctx.restore();
+  }
 }
 
 function gameLoop(timestamp) {

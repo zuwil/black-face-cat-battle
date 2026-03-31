@@ -135,15 +135,17 @@ const BONE_PIXELS = [
   [_, _, W, W, _, _, W, W, _, _],
 ];
 
-// Furball (cat enemy bullet) - 8x8
+// Furball (cat enemy bullet) - 8x8 (bright magenta/red for visibility)
+const FM = '#ff44cc'; // furball magenta
+const FR = '#ff2222'; // furball red core
 const FURBALL_PIXELS = [
-  [_, _, GR, GR, GR, _, _, _],
-  [_, GR, GR, GR, GR, GR, _, _],
-  [GR, GR, GR, GR, GR, GR, GR, _],
-  [GR, GR, GR, GR, GR, GR, GR, _],
-  [GR, GR, GR, GR, GR, GR, GR, _],
-  [_, GR, GR, GR, GR, GR, _, _],
-  [_, _, GR, GR, GR, _, _, _],
+  [_, _, FM, FM, FM, _, _, _],
+  [_, FM, FR, FR, FR, FM, _, _],
+  [FM, FR, FM, FR, FM, FR, FM, _],
+  [FM, FR, FR, FR, FR, FR, FM, _],
+  [FM, FR, FM, FR, FM, FR, FM, _],
+  [_, FM, FR, FR, FR, FM, _, _],
+  [_, _, FM, FM, FM, _, _, _],
   [_, _, _, _, _, _, _, _],
 ];
 
@@ -183,11 +185,21 @@ export function drawPaw(ctx, x, y, level) {
 }
 
 export function drawBone(ctx, x, y) {
+  // Glow effect for visibility
+  ctx.save();
+  ctx.shadowColor = '#ff4444';
+  ctx.shadowBlur = 8;
   drawPixelArt(ctx, x, y, BONE_PIXELS, 1);
+  ctx.restore();
 }
 
-export function drawFurball(ctx, x, y) {
+export function drawFurball(ctx, x, y, frame) {
+  // Bright pulsing glow for visibility
+  ctx.save();
+  ctx.shadowColor = '#ff66ff';
+  ctx.shadowBlur = 6 + Math.sin((frame || 0) * 0.2) * 3;
   drawPixelArt(ctx, x, y, FURBALL_PIXELS, 1);
+  ctx.restore();
 }
 
 export function drawPowerUp(ctx, x, y, frame) {

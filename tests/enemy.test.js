@@ -16,10 +16,10 @@ describe('DogEnemy', () => {
     assert.equal(d.isOffscreen(), true);
   });
 
-  it('does not shoot', () => {
+  it('returns array from tryShoot', () => {
     const d = new DogEnemy(100, 0);
     const bullets = d.tryShoot(100, 300, Date.now());
-    assert.equal(bullets.length, 0);
+    assert.ok(Array.isArray(bullets));
   });
 });
 
@@ -40,6 +40,7 @@ describe('CatEnemy', () => {
   it('can shoot toward player', () => {
     const c = new CatEnemy(100, 100);
     c.lastShotTime = 0;
+    c.pattern = 'aimed'; // fix pattern for deterministic test
     const bullets = c.tryShoot(200, 400, 2000);
     assert.equal(bullets.length, 1);
     assert.ok(bullets[0].dy > 0, 'bullet should move downward');
