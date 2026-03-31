@@ -12,11 +12,18 @@ export class Player {
     this.lastShotTime = 0;
   }
 
-  update(input) {
+  update(input, touch) {
+    // Keyboard movement
     if (input.left) this.x -= CONFIG.PLAYER_SPEED;
     if (input.right) this.x += CONFIG.PLAYER_SPEED;
     if (input.up) this.y -= CONFIG.PLAYER_SPEED;
     if (input.down) this.y += CONFIG.PLAYER_SPEED;
+
+    // Touch movement (drag to move)
+    if (touch && touch.active) {
+      this.x += touch.dx;
+      this.y += touch.dy;
+    }
 
     this.x = Math.max(0, Math.min(CONFIG.CANVAS_WIDTH - this.width, this.x));
     this.y = Math.max(0, Math.min(CONFIG.CANVAS_HEIGHT - this.height, this.y));

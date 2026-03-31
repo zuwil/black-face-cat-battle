@@ -17,7 +17,7 @@ import {
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const input = new Input();
+const input = new Input(canvas);
 const hud = new HUD();
 
 let state, player, background, boss;
@@ -82,7 +82,8 @@ function update(now) {
   }
 
   // Playing or Boss phase
-  player.update(input);
+  const touch = input.consumeTouch();
+  player.update(input, touch);
 
   // Auto-shoot
   if (player.canShoot(now)) {
