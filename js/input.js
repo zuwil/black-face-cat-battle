@@ -26,10 +26,11 @@ export class Input {
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
 
-    // Touch events on canvas
+    // Touch events on canvas + document fallback
     if (canvas) {
-      canvas.addEventListener('touchstart', (e) => {
+      const onTouchStart = (e) => {
         e.preventDefault();
+        e.stopPropagation();
         const t = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         this.touchActive = true;
@@ -40,36 +41,43 @@ export class Input {
         this.touchDx = 0;
         this.touchDy = 0;
         this._tapped = true;
-      }, { passive: false });
+      };
 
-      canvas.addEventListener('touchmove', (e) => {
+      const onTouchMove = (e) => {
         e.preventDefault();
+        e.stopPropagation();
         if (!this.touchActive) return;
         const t = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         const newX = t.clientX - rect.left;
         const newY = t.clientY - rect.top;
-        // Scale touch position to canvas coordinates
         const scaleX = CONFIG.CANVAS_WIDTH / rect.width;
         const scaleY = CONFIG.CANVAS_HEIGHT / rect.height;
         this.touchDx = (newX - this.touchX) * scaleX;
         this.touchDy = (newY - this.touchY) * scaleY;
         this.touchX = newX;
         this.touchY = newY;
-      }, { passive: false });
+      };
 
-      canvas.addEventListener('touchend', (e) => {
+      const onTouchEnd = (e) => {
         e.preventDefault();
         this.touchActive = false;
         this.touchDx = 0;
         this.touchDy = 0;
-      }, { passive: false });
+      };
 
-      canvas.addEventListener('touchcancel', (e) => {
-        this.touchActive = false;
-        this.touchDx = 0;
-        this.touchDy = 0;
-      });
+      // Bind to canvas
+      canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+      canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+      canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+      canvas.addEventListener('touchcancel', onTouchEnd);
+
+      // Also bind to document as fallback for phones that don't
+      // reliably fire touch events on canvas elements
+      document.addEventListener('touchstart', onTouchStart, { passive: false });
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onTouchEnd, { passive: false });
+      document.addEventListener('touchcancel', onTouchEnd);
     }
   }
 
